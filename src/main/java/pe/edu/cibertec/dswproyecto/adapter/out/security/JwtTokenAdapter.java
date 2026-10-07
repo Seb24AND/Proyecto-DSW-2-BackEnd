@@ -22,7 +22,7 @@ public class JwtTokenAdapter implements TokenPort {
 
         JwtClaimsSet claims = JwtClaimsSet.builder()
                 .subject(usuario.getUsername())
-                .claim("rol", usuario.getRol())
+                .claim("rol", usuario.getRol().name())
                 .issuedAt(Instant.now())
                 .expiresAt(Instant.now().plusSeconds(3600))
                 .build();

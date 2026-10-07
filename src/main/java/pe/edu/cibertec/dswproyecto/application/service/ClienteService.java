@@ -7,6 +7,7 @@ import pe.edu.cibertec.dswproyecto.domain.model.Usuario;
 import pe.edu.cibertec.dswproyecto.domain.port.in.ClienteUseCase;
 import pe.edu.cibertec.dswproyecto.domain.port.out.ClienteRepositoryPort;
 import pe.edu.cibertec.dswproyecto.domain.port.out.UsuarioRepositoryPort;
+import pe.edu.cibertec.dswproyecto.domain.model.RolUsuario;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -37,7 +38,7 @@ public class ClienteService implements ClienteUseCase {
                 .buscarPorId(cliente.getUsuarioId())
                 .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
 
-        if (!"CLIENTE".equals(usuario.getRol())) {
+        if (usuario.getRol() != RolUsuario.CLIENTE) {
             throw new IllegalArgumentException("El usuario no tiene rol CLIENTE");
         }
 
@@ -63,7 +64,7 @@ public class ClienteService implements ClienteUseCase {
     @Override
     public void eliminar(Integer id) {
 
-        if (!clienteRepositoryPort.buscarPorId(id).isPresent()) {
+        if (clienteRepositoryPort.buscarPorId(id).isEmpty()) {
             throw new IllegalArgumentException("Cliente no encontrado");
         }
 

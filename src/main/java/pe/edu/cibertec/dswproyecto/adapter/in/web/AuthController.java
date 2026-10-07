@@ -34,7 +34,7 @@ public class AuthController {
             return ResponseEntity.ok(
                     new LoginResponse(
                             usuario.getUsername(),
-                            usuario.getRol(),
+                            usuario.getRol().name(),
                             token,
                             "Login correcto"
                     )
