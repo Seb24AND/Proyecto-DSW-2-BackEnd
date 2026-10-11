@@ -1,3 +1,4 @@
+
 package pe.edu.cibertec.dswproyecto.config;
 
 import org.springframework.context.annotation.Bean;
@@ -62,7 +63,9 @@ public class SecurityConfig {
         JwtAuthenticationConverter authenticationConverter =
                 new JwtAuthenticationConverter();
 
-        authenticationConverter.setJwtGrantedAuthoritiesConverter(authoritiesConverter);
+        authenticationConverter.setJwtGrantedAuthoritiesConverter(
+                authoritiesConverter
+        );
 
         return authenticationConverter;
     }
@@ -70,22 +73,34 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http,
-            JwtAuthenticationConverter jwtAuthenticationConverter) throws Exception {
+            JwtAuthenticationConverter jwtAuthenticationConverter
+    ) throws Exception {
 
         http
                 .csrf(csrf -> csrf.disable())
                 .formLogin(form -> form.disable())
                 .httpBasic(basic -> basic.disable())
+
                 .authorizeHttpRequests(auth -> auth
 
-                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers(
+                                "/api/auth/login",
+                                "/api/auth/registro"
+                        ).permitAll()
 
-                        .requestMatchers(HttpMethod.GET, "/api/propiedades/**")
-                        .permitAll()
+                        .requestMatchers("/api/usuarios/**")
+                        .hasRole("ADMIN")
 
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/propiedades/**"
+                        ).permitAll()
+
+                        // Crear, modificar o eliminar propiedades: ADMIN
                         .requestMatchers("/api/propiedades/**")
                         .hasRole("ADMIN")
 
+                        // Gestión comercial: ADMIN y ASESOR
                         .requestMatchers("/api/clientes/**")
                         .hasAnyRole("ADMIN", "ASESOR")
 
@@ -98,9 +113,10 @@ public class SecurityConfig {
                         .requestMatchers("/api/separaciones/**")
                         .hasAnyRole("ADMIN", "ASESOR")
 
-                        .requestMatchers(HttpMethod.DELETE, "/api/ventas/**")
-                        .hasRole("ADMIN")
-
+                        .requestMatchers(
+                                HttpMethod.DELETE,
+                                "/api/ventas/**"
+                        ).hasRole("ADMIN")
                         .requestMatchers("/api/ventas/**")
                         .hasAnyRole("ADMIN", "ASESOR")
 
@@ -110,12 +126,17 @@ public class SecurityConfig {
                         .anyRequest()
                         .authenticated()
                 )
+
+                // Validación de tokens JWT
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .jwt(jwt -> jwt
-                                .jwtAuthenticationConverter(jwtAuthenticationConverter)
+                                .jwtAuthenticationConverter(
+                                        jwtAuthenticationConverter
+                                )
                         )
                 );
 
         return http.build();
     }
 }
+

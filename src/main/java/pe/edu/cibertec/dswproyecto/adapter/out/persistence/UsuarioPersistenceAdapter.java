@@ -5,6 +5,7 @@ import org.springframework.stereotype.Component;
 import pe.edu.cibertec.dswproyecto.domain.model.Usuario;
 import pe.edu.cibertec.dswproyecto.domain.port.out.UsuarioRepositoryPort;
 
+import java.util.List;
 import java.util.Optional;
 
 @Component
@@ -37,6 +38,13 @@ public class UsuarioPersistenceAdapter implements UsuarioRepositoryPort {
         return usuarioJpaRepository.existsByUsername(username);
     }
 
+    @Override
+    public List<Usuario> listarTodos() {
+        return usuarioJpaRepository.findAll()
+                .stream()
+                .map(this::toDomain)
+                .toList();
+    }
     private Usuario toDomain(UsuarioJpaEntity entity) {
         return new Usuario(
                 entity.getId(),
