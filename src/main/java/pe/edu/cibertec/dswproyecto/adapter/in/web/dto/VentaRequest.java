@@ -12,10 +12,6 @@ import pe.edu.cibertec.dswproyecto.domain.model.MetodoPago;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-/**
- * El lead y la propiedad no se envían: se toman de la separación.
- * Si no se envía precioVenta se usa el precio de la propiedad.
- */
 @Getter
 @Setter
 @NoArgsConstructor

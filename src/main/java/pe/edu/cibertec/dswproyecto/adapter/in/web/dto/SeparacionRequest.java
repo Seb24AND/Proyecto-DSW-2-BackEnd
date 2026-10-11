@@ -20,11 +20,6 @@ public class SeparacionRequest {
     private Integer leadId;
 
     @NotNull
-    private Integer propiedadId;
-
-    private Integer asesorId;
-
-    @NotNull
     @DecimalMin(value = "0.01")
     private BigDecimal montoSeparacion;
 

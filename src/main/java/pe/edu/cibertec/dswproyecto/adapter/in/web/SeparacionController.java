@@ -109,8 +109,8 @@ public class SeparacionController {
         return new Separacion(
                 id,
                 request.getLeadId(),
-                request.getPropiedadId(),
-                request.getAsesorId(),
+                null,
+                null,
                 request.getMontoSeparacion(),
                 request.getFechaSeparacion(),
                 request.getFechaVencimiento(),

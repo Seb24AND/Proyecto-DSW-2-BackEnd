@@ -22,14 +22,6 @@ import pe.edu.cibertec.dswproyecto.domain.port.out.VentaRepositoryPort;
 import java.time.LocalDate;
 import java.util.List;
 
-/**
- * Reglas de negocio de las ventas:
- * - Toda venta nace de una separación CONFIRMADA (lead y propiedad se copian de ella).
- * - Una separación solo puede tener una venta activa.
- * - Venta activa (INICIADA/EN_PROCESO/CONCRETADA) -> propiedad VENDIDA.
- * - Venta CONCRETADA -> lead CONVERTIDO.
- * - Venta CANCELADA -> propiedad DISPONIBLE y la separación pasa a CANCELADA.
- */
 @Service
 @RequiredArgsConstructor
 public class VentaService implements VentaUseCase {
@@ -127,10 +119,24 @@ public class VentaService implements VentaUseCase {
             throw new IllegalStateException("No se puede registrar una venta en estado CANCELADA");
         }
 
-        cambiarEstadoPropiedad(propiedad, EstadoPropiedad.VENDIDA);
+        switch (venta.getEstado()) {
 
-        if (venta.getEstado() == EstadoVenta.CONCRETADA) {
-            marcarLeadComoConvertido(venta.getLeadId());
+            case INICIADA, EN_PROCESO ->
+                    cambiarEstadoPropiedad(
+                            propiedad,
+                            EstadoPropiedad.SEPARADA
+                    );
+
+            case CONCRETADA -> {
+                cambiarEstadoPropiedad(
+                        propiedad,
+                        EstadoPropiedad.VENDIDA
+                );
+                marcarLeadComoConvertido(venta.getLeadId());
+            }
+
+            default -> {
+            }
         }
 
         return ventaRepositoryPort.guardar(venta);
@@ -193,23 +199,47 @@ public class VentaService implements VentaUseCase {
         return ventaRepositoryPort.guardar(venta);
     }
 
-    private void aplicarCambioDeEstado(Venta venta, Separacion separacion) {
+    private void aplicarCambioDeEstado(
+            Venta venta,
+            Separacion separacion) {
 
         switch (venta.getEstado()) {
 
-            case CONCRETADA -> marcarLeadComoConvertido(venta.getLeadId());
+            case INICIADA, EN_PROCESO ->
+                    propiedadRepositoryPort
+                            .buscarPorId(venta.getPropiedadId())
+                            .ifPresent(propiedad ->
+                                    cambiarEstadoPropiedad(
+                                            propiedad,
+                                            EstadoPropiedad.SEPARADA
+                                    )
+                            );
+
+            case CONCRETADA -> {
+                propiedadRepositoryPort
+                        .buscarPorId(venta.getPropiedadId())
+                        .ifPresent(propiedad ->
+                                cambiarEstadoPropiedad(
+                                        propiedad,
+                                        EstadoPropiedad.VENDIDA
+                                )
+                        );
+
+                marcarLeadComoConvertido(venta.getLeadId());
+            }
 
             case CANCELADA -> {
                 propiedadRepositoryPort
                         .buscarPorId(venta.getPropiedadId())
-                        .ifPresent(propiedad -> cambiarEstadoPropiedad(propiedad, EstadoPropiedad.DISPONIBLE));
+                        .ifPresent(propiedad ->
+                                cambiarEstadoPropiedad(
+                                        propiedad,
+                                        EstadoPropiedad.DISPONIBLE
+                                )
+                        );
 
                 separacion.setEstado(EstadoSeparacion.CANCELADA);
                 separacionRepositoryPort.guardar(separacion);
-            }
-
-            default -> {
-                // EN_PROCESO: no afecta a otras entidades
             }
         }
     }
