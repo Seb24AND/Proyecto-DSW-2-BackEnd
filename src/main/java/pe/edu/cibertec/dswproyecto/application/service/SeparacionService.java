@@ -1,3 +1,4 @@
+
 package pe.edu.cibertec.dswproyecto.application.service;
 
 import lombok.RequiredArgsConstructor;
@@ -19,6 +20,7 @@ import pe.edu.cibertec.dswproyecto.domain.port.out.VentaRepositoryPort;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -41,7 +43,8 @@ public class SeparacionService implements SeparacionUseCase {
     public Separacion buscarPorId(Integer id) {
         return separacionRepositoryPort
                 .buscarPorId(id)
-                .orElseThrow(() -> new IllegalArgumentException("Separación no encontrada"));
+                .orElseThrow(() ->
+                        new IllegalArgumentException("Separación no encontrada"));
     }
 
     @Override
@@ -59,14 +62,19 @@ public class SeparacionService implements SeparacionUseCase {
         Separacion separacion = buscarPorId(id);
 
         if (ventaRepositoryPort.existePorSeparacionId(id)) {
-            throw new IllegalStateException("No se puede eliminar una separación que tiene ventas registradas");
+            throw new IllegalStateException(
+                    "No se puede eliminar una separación que tiene ventas registradas"
+            );
         }
 
         if (separacion.getEstado().esActiva()) {
             propiedadRepositoryPort
                     .buscarPorId(separacion.getPropiedadId())
                     .ifPresent(propiedad ->
-                            cambiarEstadoPropiedad(propiedad, EstadoPropiedad.DISPONIBLE)
+                            cambiarEstadoPropiedad(
+                                    propiedad,
+                                    EstadoPropiedad.DISPONIBLE
+                            )
                     );
         }
 
@@ -82,15 +90,13 @@ public class SeparacionService implements SeparacionUseCase {
         }
 
         if (lead.getPropiedadId() == null) {
-            throw new IllegalStateException("El lead no tiene una propiedad asignada");
-        }
-
-        if (lead.getAsesorId() == null) {
-            throw new IllegalStateException("El lead no tiene un asesor asignado");
+            throw new IllegalStateException(
+                    "El lead no tiene una propiedad asociada. " +
+                            "No se puede registrar la separación"
+            );
         }
 
         separacion.setPropiedadId(lead.getPropiedadId());
-        separacion.setAsesorId(lead.getAsesorId());
 
         Propiedad propiedad = obtenerPropiedad(separacion.getPropiedadId());
 
@@ -102,7 +108,12 @@ public class SeparacionService implements SeparacionUseCase {
             separacion.setFechaSeparacion(LocalDate.now());
         }
 
+        if (separacion.getAsesorId() == null) {
+            separacion.setAsesorId(lead.getAsesorId());
+        }
+
         completarDatosComunes(separacion);
+
         validarAsesor(separacion.getAsesorId());
         validarMontoYFechas(separacion, propiedad);
 
@@ -114,11 +125,16 @@ public class SeparacionService implements SeparacionUseCase {
 
         if (!Boolean.TRUE.equals(propiedad.getActivo())
                 || propiedad.getEstado() != EstadoPropiedad.DISPONIBLE) {
-            throw new IllegalStateException("La propiedad no está disponible para separar");
+            throw new IllegalStateException(
+                    "La propiedad no está disponible para separar"
+            );
         }
 
-        if (separacionRepositoryPort.existeActivaPorPropiedadId(propiedad.getId())) {
-            throw new IllegalStateException("La propiedad ya tiene una separación activa");
+        if (separacionRepositoryPort
+                .existeActivaPorPropiedadId(propiedad.getId())) {
+            throw new IllegalStateException(
+                    "La propiedad ya tiene una separación activa"
+            );
         }
 
         cambiarEstadoPropiedad(propiedad, EstadoPropiedad.SEPARADA);
@@ -130,26 +146,34 @@ public class SeparacionService implements SeparacionUseCase {
 
         Separacion existente = buscarPorId(separacion.getId());
 
-        if (!existente.getLeadId().equals(separacion.getLeadId())) {
-            throw new IllegalStateException("No se puede cambiar el lead de una separación");
-        }
-
         if (ventaRepositoryPort.existeActivaPorSeparacionId(existente.getId())) {
             throw new IllegalStateException(
                     "No se puede modificar una separación que tiene una venta activa"
             );
         }
 
-        Lead lead = obtenerLead(existente.getLeadId());
+        Lead lead = obtenerLead(separacion.getLeadId());
 
-        if (!Boolean.TRUE.equals(lead.getActivo())) {
-            throw new IllegalStateException("El lead se encuentra inactivo");
+        if (lead.getPropiedadId() == null) {
+            throw new IllegalStateException(
+                    "El lead no tiene una propiedad asociada. " +
+                            "No se puede actualizar la separación"
+            );
         }
 
-        separacion.setPropiedadId(existente.getPropiedadId());
-        separacion.setAsesorId(existente.getAsesorId());
+        Integer propiedadIdDelLead = lead.getPropiedadId();
 
-        Propiedad propiedad = obtenerPropiedad(existente.getPropiedadId());
+        if (!Objects.equals(
+                existente.getPropiedadId(),
+                propiedadIdDelLead)) {
+            throw new IllegalStateException(
+                    "No se puede cambiar la propiedad de una separación"
+            );
+        }
+
+        separacion.setPropiedadId(propiedadIdDelLead);
+
+        Propiedad propiedad = obtenerPropiedad(separacion.getPropiedadId());
 
         if (separacion.getEstado() == null) {
             separacion.setEstado(existente.getEstado());
@@ -163,6 +187,10 @@ public class SeparacionService implements SeparacionUseCase {
             separacion.setFechaVencimiento(existente.getFechaVencimiento());
         }
 
+        if (separacion.getAsesorId() == null) {
+            separacion.setAsesorId(existente.getAsesorId());
+        }
+
         completarDatosComunes(separacion);
         validarAsesor(separacion.getAsesorId());
         validarMontoYFechas(separacion, propiedad);
@@ -173,9 +201,7 @@ public class SeparacionService implements SeparacionUseCase {
         if (!estadoAnterior.puedeCambiarA(estadoNuevo)) {
             throw new IllegalStateException(
                     "No se puede cambiar la separación de "
-                            + estadoAnterior
-                            + " a "
-                            + estadoNuevo
+                            + estadoAnterior + " a " + estadoNuevo
             );
         }
 
@@ -190,7 +216,8 @@ public class SeparacionService implements SeparacionUseCase {
 
         if (separacion.getFechaVencimiento() == null) {
             separacion.setFechaVencimiento(
-                    separacion.getFechaSeparacion().plusDays(DIAS_VENCIMIENTO_POR_DEFECTO)
+                    separacion.getFechaSeparacion()
+                            .plusDays(DIAS_VENCIMIENTO_POR_DEFECTO)
             );
         }
 
@@ -210,7 +237,8 @@ public class SeparacionService implements SeparacionUseCase {
             );
         }
 
-        if (separacion.getMontoSeparacion().compareTo(propiedad.getPrecio()) > 0) {
+        if (separacion.getMontoSeparacion()
+                .compareTo(propiedad.getPrecio()) > 0) {
             throw new IllegalArgumentException(
                     "El monto de separación no puede superar el precio de la propiedad"
             );
@@ -227,14 +255,13 @@ public class SeparacionService implements SeparacionUseCase {
     private void validarAsesor(Integer asesorId) {
 
         if (asesorId == null) {
-            throw new IllegalArgumentException("El asesor es obligatorio");
+            return;
         }
 
         Usuario asesor = usuarioRepositoryPort
                 .buscarPorId(asesorId)
                 .orElseThrow(() ->
-                        new IllegalArgumentException("Asesor no encontrado")
-                );
+                        new IllegalArgumentException("Asesor no encontrado"));
 
         if (asesor.getRol() != RolUsuario.ASESOR) {
             throw new IllegalArgumentException(
@@ -247,16 +274,14 @@ public class SeparacionService implements SeparacionUseCase {
         return leadRepositoryPort
                 .buscarPorId(leadId)
                 .orElseThrow(() ->
-                        new IllegalArgumentException("Lead no encontrado")
-                );
+                        new IllegalArgumentException("Lead no encontrado"));
     }
 
     private Propiedad obtenerPropiedad(Integer propiedadId) {
         return propiedadRepositoryPort
                 .buscarPorId(propiedadId)
                 .orElseThrow(() ->
-                        new IllegalArgumentException("Propiedad no encontrada")
-                );
+                        new IllegalArgumentException("Propiedad no encontrada"));
     }
 
     private void cambiarEstadoPropiedad(
